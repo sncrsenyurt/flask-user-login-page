@@ -2,11 +2,11 @@ import streamlit as st
 import sqlite3
 import bcrypt
 
-# Veritabanı bağlantısı oluştur
+# Veritabanı bağlantısı
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
 
-# Kullanıcı tablosunu oluştur
+# Kullanıcı tablosu oluştur
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-# Kullanıcı kaydı fonksiyonu
+# Kullanıcı kaydetme fonksiyonu
 def register_user(name, email, password):
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     try:
@@ -27,7 +27,7 @@ def register_user(name, email, password):
     except sqlite3.IntegrityError:
         return False
 
-# Kullanıcı giriş doğrulama fonksiyonu
+# Kullanıcı giriş fonksiyonu
 def login_user(email, password):
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
