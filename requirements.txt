@@ -1,5 +1,5 @@
-setuptools
-wheel
+setuptools>=68.0.0
+wheel>=0.41.0
 Cython
 
 aiohttp
@@ -17,7 +17,7 @@ altair
 asgiref
 async-timeout
 attrs
-bcrypt
+bcrypt==4.0.1
 bidict
 blinker
 cachetools
@@ -92,7 +92,7 @@ six
 smmap
 SQLAlchemy
 sqlparse
-streamlit
+streamlit>=1.12.0
 tenacity
 tokenizers
 toml
