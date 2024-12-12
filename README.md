@@ -1,4 +1,3 @@
-# flask-authentication-system
 # Flask User Management Application
 
 ## Overview
