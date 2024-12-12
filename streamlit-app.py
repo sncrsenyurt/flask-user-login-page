@@ -32,7 +32,6 @@ def login_user(email, password):
         return user
     return None
 
-# Session state for login
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "user_info" not in st.session_state:
@@ -40,18 +39,17 @@ if "user_info" not in st.session_state:
 
 st.title("User Login and Registration System")
 
+# Eğer kullanıcı giriş yaptıysa dashboard göster
 if st.session_state.logged_in and st.session_state.user_info:
-    # User dashboard
     st.title("user dashboard")
     st.write("**Name:**", st.session_state.user_info[1])
     st.write("**Email:**", st.session_state.user_info[2])
-
     if st.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.user_info = None
-        st.experimental_rerun()
+        # Logout'tan sonra tekrar form görünecek, gerekirse ekranda bir değişiklik olması için butona basılması yeterli
 else:
-    # If not logged in, show login or register forms
+    # Giriş yapılmadıysa login/register menüleri
     menu = ["Login", "Register"]
     choice = st.sidebar.selectbox("Menu", menu)
 
@@ -81,6 +79,7 @@ else:
             if user:
                 st.session_state.logged_in = True
                 st.session_state.user_info = user
-                st.experimental_rerun()
+                # Bu noktada sayfa otomatik yenilenmez, ama koşul değiştiği için kullanıcı bir sonraki
+                # etkileşimde dashboard görünecektir.
             else:
                 st.error("Invalid email or password.")
