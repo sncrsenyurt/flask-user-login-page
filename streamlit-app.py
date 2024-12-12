@@ -2,11 +2,9 @@ import streamlit as st
 import sqlite3
 import bcrypt
 
-# Veritabanı bağlantısı
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
 
-# Kullanıcı tablosu oluştur
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,7 +15,6 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 conn.commit()
 
-# Kullanıcı kaydetme fonksiyonu
 def register_user(name, email, password):
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     try:
@@ -27,7 +24,6 @@ def register_user(name, email, password):
     except sqlite3.IntegrityError:
         return False
 
-# Kullanıcı giriş fonksiyonu
 def login_user(email, password):
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
@@ -35,36 +31,35 @@ def login_user(email, password):
         return user
     return None
 
-# Streamlit UI
-st.title("Kullanıcı Giriş ve Kayıt Sistemi")
+st.title("User Login and Registration System")
 
-menu = ["Giriş Yap", "Kayıt Ol"]
-choice = st.sidebar.selectbox("Menü", menu)
+menu = ["Login", "Register"]
+choice = st.sidebar.selectbox("Menu", menu)
 
-if choice == "Kayıt Ol":
-    st.subheader("Kayıt Ol")
+if choice == "Register":
+    st.subheader("Register")
     with st.form("register_form"):
-        name = st.text_input("Adınız")
-        email = st.text_input("E-posta")
-        password = st.text_input("Şifre", type="password")
-        submit_button = st.form_submit_button("Kayıt Ol")
+        name = st.text_input("Name")
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Register")
     
     if submit_button:
         if register_user(name, email, password):
-            st.success("Kayıt başarılı! Giriş yapabilirsiniz.")
+            st.success("Registration successful! You can now log in.")
         else:
-            st.error("Bu e-posta zaten kayıtlı.")
+            st.error("This email is already registered.")
 
-elif choice == "Giriş Yap":
-    st.subheader("Giriş Yap")
+elif choice == "Login":
+    st.subheader("Login")
     with st.form("login_form"):
-        email = st.text_input("E-posta")
-        password = st.text_input("Şifre", type="password")
-        submit_button = st.form_submit_button("Giriş Yap")
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Login")
     
     if submit_button:
         user = login_user(email, password)
         if user:
-            st.success(f"Hoş geldiniz, {user[1]}!")
+            st.success(f"Welcome, {user[1]}!")
         else:
-            st.error("Geçersiz e-posta veya şifre.")
+            st.error("Invalid email or password.")
