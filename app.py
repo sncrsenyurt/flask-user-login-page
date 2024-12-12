@@ -1,80 +1,78 @@
-from flask import Flask, request,render_template, redirect,session
-from flask_sqlalchemy import SQLAlchemy
+import streamlit as st
+import sqlite3
 import bcrypt
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-db = SQLAlchemy(app)
-app.secret_key = 'secret_key'
+# Database setup
+conn = sqlite3.connect('database.db', check_same_thread=False)
+cursor = conn.cursor()
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+)
+''')
+conn.commit()
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(100))
+def register_user(name, email, password):
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    try:
+        cursor.execute('INSERT INTO users (name, email, password) VALUES (?, ?, ?)', (name, email, hashed_password))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
-    def __init__(self,email,password,name):
-        self.name = name
-        self.email = email
-        self.password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
-    def check_password(self,password):
-        return bcrypt.checkpw(password.encode('utf-8'),self.password.encode('utf-8'))
+def login_user(email, password):
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+    user = cursor.fetchone()
+    if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
+        return user
+    return None
 
-with app.app_context():
-    db.create_all()
+# Streamlit app
+st.title("User Login System")
 
+menu = st.sidebar.selectbox("Menu", ["Home", "Register", "Login", "Dashboard", "Logout"])
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+if menu == "Home":
+    st.write("Welcome to the User Login System!")
 
-@app.route('/register',methods=['GET','POST'])
-def register():
-    if request.method == 'POST':
-        # handle request
-        name = request.form['name']
-        email = request.form['email']
-        password = request.form['password']
-
-        new_user = User(name=name,email=email,password=password)
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect('/login')
-
-
-
-    return render_template('register.html')
-
-@app.route('/login',methods=['GET','POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-
-        user = User.query.filter_by(email=email).first()
-        
-        if user and user.check_password(password):
-            session['email'] = user.email
-            return redirect('/dashboard')
+elif menu == "Register":
+    st.subheader("Register")
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Register"):
+        if register_user(name, email, password):
+            st.success("Registration successful! Please log in.")
         else:
-            return render_template('login.html',error='Invalid user')
+            st.error("Email already exists. Try logging in.")
 
-    return render_template('login.html')
+elif menu == "Login":
+    st.subheader("Login")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Login"):
+        user = login_user(email, password)
+        if user:
+            st.session_state['user'] = user
+            st.success("Login successful!")
+            st.experimental_rerun()
+        else:
+            st.error("Invalid email or password.")
 
+elif menu == "Dashboard":
+    if 'user' in st.session_state:
+        st.subheader("Dashboard")
+        st.write(f"Welcome, {st.session_state['user'][1]}!")
+        st.write("Here is your dashboard content.")
+    else:
+        st.warning("You need to log in to access the dashboard.")
 
-@app.route('/dashboard')
-def dashboard():
-    if session['email']:
-        user = User.query.filter_by(email=session['email']).first()
-        return render_template('dashboard.html',user=user)
-    
-    return redirect('/login')
-
-@app.route('/logout')
-def logout():
-    session.pop('email',None)
-    return redirect('/login')
-
-if __name__ == '__main__':
-    app.run(debug=True)
+elif menu == "Logout":
+    if 'user' in st.session_state:
+        del st.session_state['user']
+        st.success("You have been logged out.")
+        st.experimental_rerun()
