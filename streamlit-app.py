@@ -1,111 +1,71 @@
 import streamlit as st
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+import sqlite3
 import bcrypt
 
-# Veritabanı Bağlantısı
-DATABASE_URL = "sqlite:///database.db"
-engine = create_engine(DATABASE_URL)
-Base = declarative_base()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-db_session = SessionLocal()
+# SQLite Veritabanı bağlantısı
+conn = sqlite3.connect("database.db")
+cursor = conn.cursor()
 
-# Veritabanı Modeli
-class User(Base):
-    __tablename__ = "users"
+# Kullanıcı tablosunu oluştur
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+)
+""")
+conn.commit()
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, index=True)
-    password = Column(String(100))
+# Kullanıcı kaydı fonksiyonu
+def register_user(name, email, password):
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    try:
+        cursor.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", (name, email, hashed_password))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
-    def __init__(self, email, password, name):
-        self.name = name
-        self.email = email
-        self.password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+# Kullanıcı giriş doğrulama fonksiyonu
+def login_user(email, password):
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    if user and bcrypt.checkpw(password.encode('utf-8'), user[3].encode('utf-8')):
+        return user
+    return None
 
-    def check_password(self, password):
-        return bcrypt.checkpw(password.encode("utf-8"), self.password.encode("utf-8"))
+# Streamlit Arayüzü
+st.title("Kullanıcı Giriş ve Kayıt Sistemi")
 
+# Seçenek menüsü
+menu = ["Giriş Yap", "Kayıt Ol"]
+choice = st.sidebar.selectbox("Menü", menu)
 
-# Veritabanını Oluşturma
-Base.metadata.create_all(bind=engine)
-
-# Streamlit Oturum Durumu
-if "email" not in st.session_state:
-    st.session_state.email = None
-
-
-# Ana Sayfa
-def show_home():
-    st.title("Hoş Geldiniz!")
-    st.write("Lütfen giriş yapın veya kayıt olun.")
-    if st.button("Giriş Yap"):
-        st.session_state.page = "login"
-    if st.button("Kayıt Ol"):
-        st.session_state.page = "register"
-
-
-# Kayıt Sayfası
-def show_register():
-    st.title("Kayıt Ol")
-    name = st.text_input("İsim")
-    email = st.text_input("E-posta")
-    password = st.text_input("Şifre", type="password")
-    if st.button("Kayıt Ol"):
-        user = User(name=name, email=email, password=password)
-        db_session.add(user)
-        try:
-            db_session.commit()
+if choice == "Kayıt Ol":
+    st.subheader("Kayıt Ol")
+    with st.form("register_form"):
+        name = st.text_input("Adınız")
+        email = st.text_input("E-posta")
+        password = st.text_input("Şifre", type="password")
+        submit_button = st.form_submit_button("Kayıt Ol")
+    
+    if submit_button:
+        if register_user(name, email, password):
             st.success("Kayıt başarılı! Giriş yapabilirsiniz.")
-            st.session_state.page = "login"
-        except Exception as e:
-            db_session.rollback()
-            st.error("Bu e-posta zaten kayıtlı.")
-
-
-# Giriş Sayfası
-def show_login():
-    st.title("Giriş Yap")
-    email = st.text_input("E-posta")
-    password = st.text_input("Şifre", type="password")
-    if st.button("Giriş Yap"):
-        user = db_session.query(User).filter_by(email=email).first()
-        if user and user.check_password(password):
-            st.session_state.email = email
-            st.success("Giriş başarılı!")
-            st.session_state.page = "dashboard"
         else:
-            st.error("Hatalı e-posta veya şifre.")
+            st.error("E-posta zaten kayıtlı!")
 
-
-# Dashboard Sayfası
-def show_dashboard():
-    st.title("Dashboard")
-    user = db_session.query(User).filter_by(email=st.session_state.email).first()
-    if user:
-        st.write(f"Merhaba, {user.name}!")
-        if st.button("Çıkış Yap"):
-            st.session_state.email = None
-            st.session_state.page = "home"
-    else:
-        st.error("Bir hata oluştu. Lütfen tekrar giriş yapın.")
-        st.session_state.page = "login"
-
-
-# Sayfa Yönlendirme
-if "page" not in st.session_state:
-    st.session_state.page = "home"
-
-if st.session_state.page == "home":
-    show_home()
-elif st.session_state.page == "register":
-    show_register()
-elif st.session_state.page == "login":
-    show_login()
-elif st.session_state.page == "dashboard":
-    if st.session_state.email:
-        show_dashboard()
-    else:
-        st.session_state.page = "login"
+elif choice == "Giriş Yap":
+    st.subheader("Giriş Yap")
+    with st.form("login_form"):
+        email = st.text_input("E-posta")
+        password = st.text_input("Şifre", type="password")
+        submit_button = st.form_submit_button("Giriş Yap")
+    
+    if submit_button:
+        user = login_user(email, password)
+        if user:
+            st.success(f"Hoş geldiniz, {user[1]}!")
+        else:
+            st.error("Hatalı e-posta veya şifre!")
