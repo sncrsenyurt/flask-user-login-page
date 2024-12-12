@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 import bcrypt
 
-# SQLite Veritabanı bağlantısı
+# Veritabanı bağlantısı oluştur
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
 
@@ -35,10 +35,9 @@ def login_user(email, password):
         return user
     return None
 
-# Streamlit Arayüzü
+# Streamlit UI
 st.title("Kullanıcı Giriş ve Kayıt Sistemi")
 
-# Seçenek menüsü
 menu = ["Giriş Yap", "Kayıt Ol"]
 choice = st.sidebar.selectbox("Menü", menu)
 
@@ -54,7 +53,7 @@ if choice == "Kayıt Ol":
         if register_user(name, email, password):
             st.success("Kayıt başarılı! Giriş yapabilirsiniz.")
         else:
-            st.error("E-posta zaten kayıtlı!")
+            st.error("Bu e-posta zaten kayıtlı.")
 
 elif choice == "Giriş Yap":
     st.subheader("Giriş Yap")
@@ -68,4 +67,4 @@ elif choice == "Giriş Yap":
         if user:
             st.success(f"Hoş geldiniz, {user[1]}!")
         else:
-            st.error("Hatalı e-posta veya şifre!")
+            st.error("Geçersiz e-posta veya şifre.")
