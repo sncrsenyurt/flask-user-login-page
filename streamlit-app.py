@@ -2,7 +2,6 @@ import streamlit as st
 import sqlite3
 import bcrypt
 
-# Database connection
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
 
@@ -39,7 +38,6 @@ if "user_info" not in st.session_state:
 
 st.title("User Login and Registration System")
 
-# Eğer kullanıcı giriş yaptıysa dashboard göster
 if st.session_state.logged_in and st.session_state.user_info:
     st.title("user dashboard")
     st.write("**Name:**", st.session_state.user_info[1])
@@ -47,9 +45,7 @@ if st.session_state.logged_in and st.session_state.user_info:
     if st.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.user_info = None
-        # Logout'tan sonra tekrar form görünecek, gerekirse ekranda bir değişiklik olması için butona basılması yeterli
 else:
-    # Giriş yapılmadıysa login/register menüleri
     menu = ["Login", "Register"]
     choice = st.sidebar.selectbox("Menu", menu)
 
@@ -79,7 +75,5 @@ else:
             if user:
                 st.session_state.logged_in = True
                 st.session_state.user_info = user
-                # Bu noktada sayfa otomatik yenilenmez, ama koşul değiştiği için kullanıcı bir sonraki
-                # etkileşimde dashboard görünecektir.
             else:
                 st.error("Invalid email or password.")
